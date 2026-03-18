@@ -4,11 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.plazoleta.user.application.command.CreateOwnerCommand;
+import com.plazoleta.user.application.command.CreateEmployeeCommand;
+import com.plazoleta.user.application.command.CreateCustomerCommand;
 import com.plazoleta.user.application.query.GetUserAuthenticationByEmailQuery;
 import com.plazoleta.user.application.query.GetUserByIdQuery;
 import com.plazoleta.user.application.response.UserAuthenticationResponse;
 import com.plazoleta.user.application.response.UserDetailsResponse;
 import com.plazoleta.user.application.response.UserCreatedResponse;
+import com.plazoleta.user.domain.api.CreateCustomerServicePort;
+import com.plazoleta.user.domain.api.CreateEmployeeServicePort;
 import com.plazoleta.user.domain.api.CreateOwnerServicePort;
 import com.plazoleta.user.domain.api.GetUserAuthenticationByEmailServicePort;
 import com.plazoleta.user.domain.api.GetUserByIdServicePort;
@@ -20,11 +24,15 @@ import org.mockito.Mockito;
 class UserHandlerTest {
 
     private final CreateOwnerServicePort createOwnerServicePort = Mockito.mock(CreateOwnerServicePort.class);
+    private final CreateEmployeeServicePort createEmployeeServicePort = Mockito.mock(CreateEmployeeServicePort.class);
+    private final CreateCustomerServicePort createCustomerServicePort = Mockito.mock(CreateCustomerServicePort.class);
     private final GetUserByIdServicePort getUserByIdServicePort = Mockito.mock(GetUserByIdServicePort.class);
     private final GetUserAuthenticationByEmailServicePort getUserAuthenticationByEmailServicePort =
             Mockito.mock(GetUserAuthenticationByEmailServicePort.class);
     private final UserHandler userHandler = new UserHandler(
             createOwnerServicePort,
+            createEmployeeServicePort,
+            createCustomerServicePort,
             getUserByIdServicePort,
             getUserAuthenticationByEmailServicePort
     );
@@ -65,5 +73,31 @@ class UserHandlerTest {
         )).thenReturn(response);
 
         assertThat(userHandler.getUserAuthenticationByEmail("owner@plazoleta.com").id()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("should delegate employee creation to service port")
+    void shouldDelegateEmployeeCreationToServicePort() {
+        CreateEmployeeCommand command = new CreateEmployeeCommand(
+                "John", "Doe", "123456790", "+573005698326",
+                "employee@plazoleta.com", 3L, "Admin123*", 1L, 2L
+        );
+        UserCreatedResponse response = UserCreatedResponse.builder().id(2L).email("employee@plazoleta.com").role("EMPLOYEE").build();
+        when(createEmployeeServicePort.createEmployee(command)).thenReturn(response);
+
+        assertThat(userHandler.createEmployee(command).id()).isEqualTo(2L);
+    }
+
+    @Test
+    @DisplayName("should delegate customer creation to service port")
+    void shouldDelegateCustomerCreationToServicePort() {
+        CreateCustomerCommand command = new CreateCustomerCommand(
+                "Jane", "Doe", "123456791", "+573005698327",
+                "customer@plazoleta.com", 4L, "Admin123*"
+        );
+        UserCreatedResponse response = UserCreatedResponse.builder().id(3L).email("customer@plazoleta.com").role("CUSTOMER").build();
+        when(createCustomerServicePort.createCustomer(command)).thenReturn(response);
+
+        assertThat(userHandler.createCustomer(command).id()).isEqualTo(3L);
     }
 }

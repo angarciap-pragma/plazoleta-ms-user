@@ -41,7 +41,7 @@ public class UserEntity {
     @Column(name = "phone_number", nullable = false, length = 13)
     private String phoneNumber;
 
-    @Column(name = "birth_date", nullable = false)
+    @Column(name = "birth_date")
     private LocalDate birthDate;
 
     @Column(name = "email", nullable = false, unique = true)
@@ -55,4 +55,7 @@ public class UserEntity {
 
     @Column(name = "active", nullable = false)
     private boolean active;
+
+    @Column(name = "restaurant_id")
+    private Long restaurantId;
 }

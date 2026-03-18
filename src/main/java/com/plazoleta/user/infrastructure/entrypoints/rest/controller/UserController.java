@@ -1,6 +1,9 @@
 package com.plazoleta.user.infrastructure.entrypoints.rest.controller;
 
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.request.CreateOwnerRequestDto;
+import com.plazoleta.common.security.AuthenticatedUserProvider;
+import com.plazoleta.user.infrastructure.entrypoints.rest.dto.request.CreateEmployeeRequestDto;
+import com.plazoleta.user.infrastructure.entrypoints.rest.dto.request.CreateCustomerRequestDto;
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.response.UserAuthenticationResponseDto;
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.response.UserDetailsResponseDto;
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.response.UserCreatedResponseDto;
@@ -33,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Users", description = "Endpoints for user management")
 public class UserController {
 
+    private final AuthenticatedUserProvider authenticatedUserProvider;
     private final UserHandler userHandler;
     private final UserRestMapper userRestMapper;
 
@@ -62,6 +66,53 @@ public class UserController {
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(userRestMapper.toDto(userHandler.createOwner(userRestMapper.toCommand(requestDto))));
+    }
+
+    @PostMapping("/employees")
+    @Operation(
+            summary = "Create employee user",
+            responses = {
+                    @ApiResponse(responseCode = "201", description = "Employee created"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request"),
+                    @ApiResponse(responseCode = "403", description = "Owner restaurant mismatch"),
+                    @ApiResponse(responseCode = "409", description = "Duplicated employee data")
+            }
+    )
+    public ResponseEntity<UserCreatedResponseDto> createEmployee(
+            @Valid @RequestBody final CreateEmployeeRequestDto requestDto
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(userRestMapper.toDto(
+                        userHandler.createEmployee(
+                                new com.plazoleta.user.application.command.CreateEmployeeCommand(
+                                        requestDto.firstName(),
+                                        requestDto.lastName(),
+                                        requestDto.documentId(),
+                                        requestDto.phoneNumber(),
+                                        requestDto.email(),
+                                        requestDto.roleId(),
+                                        requestDto.password(),
+                                        requestDto.restaurantId(),
+                                        authenticatedUserProvider.getCurrentUser().userId()
+                                )
+                        )
+                ));
+    }
+
+    @PostMapping("/customers")
+    @Operation(
+            summary = "Create customer user",
+            responses = {
+                    @ApiResponse(responseCode = "201", description = "Customer created"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request"),
+                    @ApiResponse(responseCode = "409", description = "Duplicated customer data")
+            }
+    )
+    public ResponseEntity<UserCreatedResponseDto> createCustomer(
+            @Valid @RequestBody final CreateCustomerRequestDto requestDto
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(userRestMapper.toDto(userHandler.createCustomer(userRestMapper.toCommand(requestDto))));
     }
 
     @GetMapping("/{id}")

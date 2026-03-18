@@ -34,6 +34,7 @@ public class UserSecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
                                 "/users/internal/**",
+                                "/users/customers",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
@@ -41,6 +42,7 @@ public class UserSecurityConfig {
                                 "/actuator/info"
                         ).permitAll()
                         .requestMatchers("/users/owners").hasRole(UserRole.ADMIN.name())
+                        .requestMatchers("/users/employees").hasRole(UserRole.OWNER.name())
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

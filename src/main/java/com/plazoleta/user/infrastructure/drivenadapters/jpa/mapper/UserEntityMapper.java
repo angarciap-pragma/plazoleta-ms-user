@@ -22,6 +22,7 @@ public interface UserEntityMapper {
                 .password(user.getPassword())
                 .role(user.getRole())
                 .active(user.isActive())
+                .restaurantId(user.getRestaurantId())
                 .build();
     }
 
@@ -37,6 +38,7 @@ public interface UserEntityMapper {
                 .password(entity.getPassword())
                 .role(entity.getRole())
                 .active(entity.isActive())
+                .restaurantId(entity.getRestaurantId())
                 .build();
     }
 }

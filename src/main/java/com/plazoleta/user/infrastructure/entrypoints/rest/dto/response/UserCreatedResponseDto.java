@@ -11,6 +11,7 @@ public record UserCreatedResponseDto(
         String phoneNumber,
         String birthDate,
         String email,
-        String role
+        String role,
+        Long restaurantId
 ) {
 }

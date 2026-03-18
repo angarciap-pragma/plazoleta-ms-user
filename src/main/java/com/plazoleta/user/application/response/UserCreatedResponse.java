@@ -14,6 +14,7 @@ public record UserCreatedResponse(
         String phoneNumber,
         String birthDate,
         String email,
-        String role
+        String role,
+        Long restaurantId
 ) {
 }

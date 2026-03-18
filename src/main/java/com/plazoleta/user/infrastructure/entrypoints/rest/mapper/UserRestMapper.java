@@ -1,14 +1,19 @@
 package com.plazoleta.user.infrastructure.entrypoints.rest.mapper;
 
 import com.plazoleta.user.application.command.CreateOwnerCommand;
+import com.plazoleta.user.application.command.CreateEmployeeCommand;
+import com.plazoleta.user.application.command.CreateCustomerCommand;
 import com.plazoleta.user.application.response.UserAuthenticationResponse;
 import com.plazoleta.user.application.response.UserDetailsResponse;
 import com.plazoleta.user.application.response.UserCreatedResponse;
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.request.CreateOwnerRequestDto;
+import com.plazoleta.user.infrastructure.entrypoints.rest.dto.request.CreateEmployeeRequestDto;
+import com.plazoleta.user.infrastructure.entrypoints.rest.dto.request.CreateCustomerRequestDto;
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.response.UserAuthenticationResponseDto;
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.response.UserDetailsResponseDto;
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.response.UserCreatedResponseDto;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 /**
  * Mapea contratos HTTP hacia comandos y respuestas de aplicación.
@@ -17,6 +22,11 @@ import org.mapstruct.Mapper;
 public interface UserRestMapper {
 
     CreateOwnerCommand toCommand(CreateOwnerRequestDto requestDto);
+
+    @Mapping(target = "ownerId", ignore = true)
+    CreateEmployeeCommand toCommand(CreateEmployeeRequestDto requestDto);
+
+    CreateCustomerCommand toCommand(CreateCustomerRequestDto requestDto);
 
     UserCreatedResponseDto toDto(UserCreatedResponse response);
 

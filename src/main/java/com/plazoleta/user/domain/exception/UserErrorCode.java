@@ -10,7 +10,10 @@ public enum UserErrorCode implements ErrorCode {
     EMAIL_ALREADY_EXISTS("USER_409_EMAIL_ALREADY_EXISTS", "Email already exists", HttpStatus.CONFLICT),
     DOCUMENT_ALREADY_EXISTS("USER_409_DOCUMENT_ALREADY_EXISTS", "Document already exists", HttpStatus.CONFLICT),
     UNDERAGE_OWNER("USER_400_UNDERAGE_OWNER", "Owner must be of legal age", HttpStatus.BAD_REQUEST),
-    USER_NOT_FOUND("USER_404_USER_NOT_FOUND", "User not found", HttpStatus.NOT_FOUND);
+    INVALID_ROLE_ID("USER_400_INVALID_ROLE_ID", "Role id is invalid for this operation", HttpStatus.BAD_REQUEST),
+    USER_NOT_FOUND("USER_404_USER_NOT_FOUND", "User not found", HttpStatus.NOT_FOUND),
+    OWNER_RESTAURANT_MISMATCH("USER_403_OWNER_RESTAURANT_MISMATCH", "Owner can only create employees for owned restaurants",
+            HttpStatus.FORBIDDEN);
 
     private final String code;
     private final String defaultMessage;

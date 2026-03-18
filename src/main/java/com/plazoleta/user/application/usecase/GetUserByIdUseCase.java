@@ -31,6 +31,7 @@ public class GetUserByIdUseCase implements GetUserByIdServicePort {
                 .documentId(user.getDocumentId())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .restaurantId(user.getRestaurantId())
                 .build();
     }
 }

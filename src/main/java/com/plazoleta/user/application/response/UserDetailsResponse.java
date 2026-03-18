@@ -12,6 +12,7 @@ public record UserDetailsResponse(
         String lastName,
         String documentId,
         String email,
-        String role
+        String role,
+        Long restaurantId
 ) {
 }

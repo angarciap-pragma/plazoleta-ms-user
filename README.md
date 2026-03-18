@@ -2,13 +2,21 @@
 
 Microservicio encargado de la gestión de usuarios del reto Plazoleta.
 
-## HU implementada en este paso
+## HUs implementadas
 
 - HU1: crear propietario
+- HU5: autenticación y autorización por roles
+- HU6: crear empleado
+- HU8: crear cliente
 
-## Endpoint disponible
+## Endpoints disponibles
 
 - `POST /users/owners`
+- `POST /users/employees`
+- `POST /users/customers`
+- `GET /users/{id}`
+- `GET /users/internal/{id}`
+- `GET /users/internal/authentication?email=...`
 
 ## Ejecución local
 
@@ -28,6 +36,12 @@ OpenAPI JSON local:
 
 ```text
 http://localhost:8082/v3/api-docs
+```
+
+Actuator local:
+
+```text
+http://localhost:8082/actuator/health
 ```
 
 ## Validación

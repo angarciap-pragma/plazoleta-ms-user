@@ -5,12 +5,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.plazoleta.user.infrastructure.entrypoints.rest.dto.request.CreateCustomerRequestDto;
+import com.plazoleta.user.infrastructure.entrypoints.rest.dto.request.CreateEmployeeRequestDto;
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.request.CreateOwnerRequestDto;
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.response.UserAuthenticationResponseDto;
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.response.UserDetailsResponseDto;
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.response.UserCreatedResponseDto;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -21,7 +24,10 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Map;
 import javax.crypto.SecretKey;
+import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -33,17 +39,46 @@ import org.springframework.test.context.TestPropertySource;
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT
 )
 @TestPropertySource(properties = {
-        "spring.jpa.hibernate.ddl-auto=create-drop"
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "user.clients.restaurant-service.base-url=http://localhost:18083"
 })
 class UserControllerTest {
 
     private static final String JWT_SECRET = "this-is-a-shared-secret-key-with-safe-length-123456";
     private static final String JWT_ISSUER = "plazoleta-auth";
+    private static HttpServer restaurantStubServer;
 
     @LocalServerPort
     private int port;
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+
+    @BeforeAll
+    static void setUpRestaurantStub() throws IOException {
+        restaurantStubServer = HttpServer.create(new java.net.InetSocketAddress(18083), 0);
+        restaurantStubServer.createContext("/restaurants/internal/1", exchange -> {
+            byte[] response = "{\"id\":1,\"ownerId\":2}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(HttpStatus.OK.value(), response.length);
+            exchange.getResponseBody().write(response);
+            exchange.close();
+        });
+        restaurantStubServer.createContext("/restaurants/internal/9", exchange -> {
+            byte[] response = "{\"id\":9,\"ownerId\":9}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(HttpStatus.OK.value(), response.length);
+            exchange.getResponseBody().write(response);
+            exchange.close();
+        });
+        restaurantStubServer.start();
+    }
+
+    @AfterAll
+    static void tearDownRestaurantStub() {
+        if (restaurantStubServer != null) {
+            restaurantStubServer.stop(0);
+        }
+    }
 
     @Test
     @DisplayName("should create owner successfully")
@@ -227,12 +262,114 @@ class UserControllerTest {
         assertThat(response.statusCode()).isEqualTo(HttpStatus.FORBIDDEN.value());
     }
 
+    @Test
+    @DisplayName("should create employee when caller owns restaurant")
+    void shouldCreateEmployeeWhenCallerOwnsRestaurant() throws Exception {
+        CreateEmployeeRequestDto requestDto = new CreateEmployeeRequestDto(
+                "John",
+                "Cook",
+                "456789123",
+                "+573005698329",
+                "employee@plazoleta.com",
+                3L,
+                "Employee123*",
+                1L
+        );
+
+        HttpResponse<String> response = sendPostRequest(
+                "/users/employees",
+                requestDto,
+                buildToken(2L, "owner@plazoleta.com", "OWNER")
+        );
+        UserCreatedResponseDto body = objectMapper.readValue(response.body(), UserCreatedResponseDto.class);
+
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.CREATED.value());
+        assertThat(body.role()).isEqualTo("EMPLOYEE");
+        assertThat(body.restaurantId()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("should reject employee creation when owner does not own restaurant")
+    void shouldRejectEmployeeCreationWhenOwnerDoesNotOwnRestaurant() throws Exception {
+        CreateEmployeeRequestDto requestDto = new CreateEmployeeRequestDto(
+                "Jane",
+                "Cook",
+                "456789124",
+                "+573005698330",
+                "employee-forbidden@plazoleta.com",
+                3L,
+                "Employee123*",
+                9L
+        );
+
+        HttpResponse<String> response = sendPostRequest(
+                "/users/employees",
+                requestDto,
+                buildToken(2L, "owner@plazoleta.com", "OWNER")
+        );
+
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.FORBIDDEN.value());
+    }
+
+    @Test
+    @DisplayName("should create customer without jwt")
+    void shouldCreateCustomerWithoutJwt() throws Exception {
+        CreateCustomerRequestDto requestDto = new CreateCustomerRequestDto(
+                "Customer",
+                "Plazoleta",
+                "789456123",
+                "+573005698331",
+                "customer@plazoleta.com",
+                4L,
+                "Customer123*"
+        );
+
+        HttpResponse<String> response = sendPostRequest("/users/customers", requestDto, null);
+        UserCreatedResponseDto body = objectMapper.readValue(response.body(), UserCreatedResponseDto.class);
+
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.CREATED.value());
+        assertThat(body.role()).isEqualTo("CUSTOMER");
+        assertThat(body.restaurantId()).isNull();
+    }
+
+    @Test
+    @DisplayName("should reject employee creation when caller is not owner")
+    void shouldRejectEmployeeCreationWhenCallerIsNotOwner() throws Exception {
+        CreateEmployeeRequestDto requestDto = new CreateEmployeeRequestDto(
+                "John",
+                "Cook",
+                "456789125",
+                "+573005698332",
+                "employee-role@plazoleta.com",
+                3L,
+                "Employee123*",
+                1L
+        );
+
+        HttpResponse<String> response = sendPostRequest(
+                "/users/employees",
+                requestDto,
+                buildToken(1L, "admin@plazoleta.com", "ADMIN")
+        );
+
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.FORBIDDEN.value());
+    }
+
     private HttpResponse<String> sendCreateOwnerRequest(final CreateOwnerRequestDto requestDto, final String token) throws Exception {
+        return sendPostRequest("/users/owners", requestDto, token);
+    }
+
+    private HttpResponse<String> sendPostRequest(final String path, final Object requestDto, final String token) throws Exception {
         HttpClient httpClient = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:" + port + "/users/owners"))
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + token)
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + path))
+                .header("Content-Type", "application/json");
+
+        if (token != null) {
+            builder.header("Authorization", "Bearer " + token);
+        }
+
+        HttpRequest request = builder
                 .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(requestDto)))
                 .build();
 

@@ -26,6 +26,7 @@ public class User {
     private final String password;
     private final String role;
     private final boolean active;
+    private final Long restaurantId;
 
     public static User createOwner(
             final String firstName,
@@ -47,6 +48,7 @@ public class User {
                 .password(encodedPassword)
                 .role(UserRole.OWNER.name())
                 .active(true)
+                .restaurantId(null)
                 .build();
     }
 
@@ -70,6 +72,52 @@ public class User {
                 .password(encodedPassword)
                 .role(UserRole.ADMIN.name())
                 .active(true)
+                .restaurantId(null)
+                .build();
+    }
+
+    public static User createEmployee(
+            final String firstName,
+            final String lastName,
+            final String documentId,
+            final String phoneNumber,
+            final String email,
+            final String encodedPassword,
+            final Long restaurantId
+    ) {
+        return User.builder()
+                .firstName(firstName)
+                .lastName(lastName)
+                .documentId(documentId)
+                .phoneNumber(phoneNumber)
+                .birthDate(null)
+                .email(email)
+                .password(encodedPassword)
+                .role(UserRole.EMPLOYEE.name())
+                .active(true)
+                .restaurantId(restaurantId)
+                .build();
+    }
+
+    public static User createCustomer(
+            final String firstName,
+            final String lastName,
+            final String documentId,
+            final String phoneNumber,
+            final String email,
+            final String encodedPassword
+    ) {
+        return User.builder()
+                .firstName(firstName)
+                .lastName(lastName)
+                .documentId(documentId)
+                .phoneNumber(phoneNumber)
+                .birthDate(null)
+                .email(email)
+                .password(encodedPassword)
+                .role(UserRole.CUSTOMER.name())
+                .active(true)
+                .restaurantId(null)
                 .build();
     }
 
