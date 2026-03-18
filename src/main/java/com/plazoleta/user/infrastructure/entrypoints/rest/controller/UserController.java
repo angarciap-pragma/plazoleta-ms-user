@@ -1,6 +1,7 @@
 package com.plazoleta.user.infrastructure.entrypoints.rest.controller;
 
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.request.CreateOwnerRequestDto;
+import com.plazoleta.user.infrastructure.entrypoints.rest.dto.response.UserAuthenticationResponseDto;
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.response.UserDetailsResponseDto;
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.response.UserCreatedResponseDto;
 import com.plazoleta.user.infrastructure.entrypoints.rest.mapper.UserRestMapper;
@@ -18,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -72,5 +74,31 @@ public class UserController {
     )
     public ResponseEntity<UserDetailsResponseDto> getUserById(@PathVariable final Long id) {
         return ResponseEntity.ok(userRestMapper.toDto(userHandler.getUserById(id)));
+    }
+
+    @GetMapping("/internal/{id}")
+    @Operation(
+            summary = "Get internal user by id",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "User found"),
+                    @ApiResponse(responseCode = "404", description = "User not found")
+            }
+    )
+    public ResponseEntity<UserDetailsResponseDto> getInternalUserById(@PathVariable final Long id) {
+        return ResponseEntity.ok(userRestMapper.toDto(userHandler.getUserById(id)));
+    }
+
+    @GetMapping("/internal/authentication")
+    @Operation(
+            summary = "Get user authentication data by email",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "User found"),
+                    @ApiResponse(responseCode = "404", description = "User not found")
+            }
+    )
+    public ResponseEntity<UserAuthenticationResponseDto> getUserAuthenticationByEmail(
+            @RequestParam final String email
+    ) {
+        return ResponseEntity.ok(userRestMapper.toDto(userHandler.getUserAuthenticationByEmail(email)));
     }
 }

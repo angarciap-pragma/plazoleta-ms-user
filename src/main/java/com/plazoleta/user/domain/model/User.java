@@ -25,6 +25,7 @@ public class User {
     private final String email;
     private final String password;
     private final String role;
+    private final boolean active;
 
     public static User createOwner(
             final String firstName,
@@ -45,6 +46,30 @@ public class User {
                 .email(email)
                 .password(encodedPassword)
                 .role(UserRole.OWNER.name())
+                .active(true)
+                .build();
+    }
+
+    public static User createAdmin(
+            final String firstName,
+            final String lastName,
+            final String documentId,
+            final String phoneNumber,
+            final LocalDate birthDate,
+            final String email,
+            final String encodedPassword
+    ) {
+        validateLegalAge(birthDate);
+        return User.builder()
+                .firstName(firstName)
+                .lastName(lastName)
+                .documentId(documentId)
+                .phoneNumber(phoneNumber)
+                .birthDate(birthDate)
+                .email(email)
+                .password(encodedPassword)
+                .role(UserRole.ADMIN.name())
+                .active(true)
                 .build();
     }
 

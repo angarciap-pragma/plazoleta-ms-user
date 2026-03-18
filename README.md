@@ -16,6 +16,20 @@ Microservicio encargado de la gestión de usuarios del reto Plazoleta.
 bash gradlew bootRun
 ```
 
+## Documentación OpenAPI
+
+Swagger UI local:
+
+```text
+http://localhost:8082/swagger-ui.html
+```
+
+OpenAPI JSON local:
+
+```text
+http://localhost:8082/v3/api-docs
+```
+
 ## Validación
 
 ```bash

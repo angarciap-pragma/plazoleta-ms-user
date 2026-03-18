@@ -6,14 +6,21 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.request.CreateOwnerRequestDto;
+import com.plazoleta.user.infrastructure.entrypoints.rest.dto.response.UserAuthenticationResponseDto;
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.response.UserDetailsResponseDto;
 import com.plazoleta.user.infrastructure.entrypoints.rest.dto.response.UserCreatedResponseDto;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Map;
+import javax.crypto.SecretKey;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,6 +36,9 @@ import org.springframework.test.context.TestPropertySource;
         "spring.jpa.hibernate.ddl-auto=create-drop"
 })
 class UserControllerTest {
+
+    private static final String JWT_SECRET = "this-is-a-shared-secret-key-with-safe-length-123456";
+    private static final String JWT_ISSUER = "plazoleta-auth";
 
     @LocalServerPort
     private int port;
@@ -48,7 +58,7 @@ class UserControllerTest {
                 "Admin123*"
         );
 
-        HttpResponse<String> response = sendCreateOwnerRequest(requestDto);
+        HttpResponse<String> response = sendCreateOwnerRequest(requestDto, buildToken(1L, "admin@plazoleta.com", "ADMIN"));
         UserCreatedResponseDto body = objectMapper.readValue(response.body(), UserCreatedResponseDto.class);
 
         assertThat(response.statusCode()).isEqualTo(HttpStatus.CREATED.value());
@@ -70,8 +80,8 @@ class UserControllerTest {
                 "Admin123*"
         );
 
-        sendCreateOwnerRequest(requestDto);
-        HttpResponse<String> response = sendCreateOwnerRequest(requestDto);
+        sendCreateOwnerRequest(requestDto, buildToken(1L, "admin@plazoleta.com", "ADMIN"));
+        HttpResponse<String> response = sendCreateOwnerRequest(requestDto, buildToken(1L, "admin@plazoleta.com", "ADMIN"));
         Map<String, Object> body = objectMapper.readValue(response.body(), new TypeReference<>() {
         });
 
@@ -92,7 +102,7 @@ class UserControllerTest {
                 "Admin123*"
         );
 
-        HttpResponse<String> response = sendCreateOwnerRequest(requestDto);
+        HttpResponse<String> response = sendCreateOwnerRequest(requestDto, buildToken(1L, "admin@plazoleta.com", "ADMIN"));
         Map<String, Object> body = objectMapper.readValue(response.body(), new TypeReference<>() {
         });
 
@@ -113,7 +123,7 @@ class UserControllerTest {
                 "Admin123*"
         );
 
-        HttpResponse<String> response = sendCreateOwnerRequest(requestDto);
+        HttpResponse<String> response = sendCreateOwnerRequest(requestDto, buildToken(1L, "admin@plazoleta.com", "ADMIN"));
         Map<String, Object> body = objectMapper.readValue(response.body(), new TypeReference<>() {
         });
 
@@ -134,12 +144,13 @@ class UserControllerTest {
                 "Admin123*"
         );
 
-        HttpResponse<String> createResponse = sendCreateOwnerRequest(requestDto);
+        HttpResponse<String> createResponse = sendCreateOwnerRequest(requestDto, buildToken(1L, "admin@plazoleta.com", "ADMIN"));
         UserCreatedResponseDto created = objectMapper.readValue(createResponse.body(), UserCreatedResponseDto.class);
 
         HttpClient httpClient = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + "/users/" + created.id()))
+                .header("Authorization", "Bearer " + buildToken(1L, "admin@plazoleta.com", "ADMIN"))
                 .GET()
                 .build();
 
@@ -150,14 +161,97 @@ class UserControllerTest {
         assertThat(body.role()).isEqualTo("OWNER");
     }
 
-    private HttpResponse<String> sendCreateOwnerRequest(final CreateOwnerRequestDto requestDto) throws Exception {
+    @Test
+    @DisplayName("should expose internal authentication lookup without jwt")
+    void shouldExposeInternalAuthenticationLookupWithoutJwt() throws Exception {
+        HttpClient httpClient = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/users/internal/authentication?email=admin@plazoleta.com"))
+                .GET()
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        UserAuthenticationResponseDto body = objectMapper.readValue(response.body(), UserAuthenticationResponseDto.class);
+
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.OK.value());
+        assertThat(body.role()).isEqualTo("ADMIN");
+        assertThat(body.password()).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("should expose internal user lookup without jwt")
+    void shouldExposeInternalUserLookupWithoutJwt() throws Exception {
+        CreateOwnerRequestDto requestDto = new CreateOwnerRequestDto(
+                "Andrea",
+                "Garcia",
+                "323344556",
+                "+573005698324",
+                LocalDate.parse("1990-01-01"),
+                "internal-owner@plazoleta.com",
+                "Admin123*"
+        );
+        HttpResponse<String> createResponse = sendCreateOwnerRequest(
+                requestDto,
+                buildToken(1L, "admin@plazoleta.com", "ADMIN")
+        );
+        UserCreatedResponseDto created = objectMapper.readValue(createResponse.body(), UserCreatedResponseDto.class);
+
+        HttpClient httpClient = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/users/internal/" + created.id()))
+                .GET()
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        UserDetailsResponseDto body = objectMapper.readValue(response.body(), UserDetailsResponseDto.class);
+
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.OK.value());
+        assertThat(body.email()).isEqualTo("internal-owner@plazoleta.com");
+    }
+
+    @Test
+    @DisplayName("should reject owner creation when caller is not admin")
+    void shouldRejectOwnerCreationWhenCallerIsNotAdmin() throws Exception {
+        CreateOwnerRequestDto requestDto = new CreateOwnerRequestDto(
+                "Andrea",
+                "Garcia",
+                "123456783",
+                "+573005698323",
+                LocalDate.parse("1990-01-01"),
+                "forbidden-owner@plazoleta.com",
+                "Admin123*"
+        );
+
+        HttpResponse<String> response = sendCreateOwnerRequest(requestDto, buildToken(2L, "owner@plazoleta.com", "OWNER"));
+
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.FORBIDDEN.value());
+    }
+
+    private HttpResponse<String> sendCreateOwnerRequest(final CreateOwnerRequestDto requestDto, final String token) throws Exception {
         HttpClient httpClient = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + "/users/owners"))
                 .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + token)
                 .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(requestDto)))
                 .build();
 
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    private String buildToken(final Long userId, final String email, final String role) {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        SecretKey secretKey = Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8));
+
+        return Jwts.builder()
+                .subject(email)
+                .issuer(JWT_ISSUER)
+                .issuedAt(java.util.Date.from(now.toInstant()))
+                .expiration(java.util.Date.from(now.plusMinutes(30).toInstant()))
+                .claim("userId", userId)
+                .claim("email", email)
+                .claim("role", role)
+                .signWith(secretKey)
+                .compact();
     }
 }

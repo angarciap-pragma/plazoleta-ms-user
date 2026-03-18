@@ -52,4 +52,7 @@ public class UserEntity {
 
     @Column(name = "role", nullable = false)
     private String role;
+
+    @Column(name = "active", nullable = false)
+    private boolean active;
 }

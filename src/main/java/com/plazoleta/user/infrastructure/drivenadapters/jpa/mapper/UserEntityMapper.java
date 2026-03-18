@@ -21,6 +21,7 @@ public interface UserEntityMapper {
                 .email(user.getEmail())
                 .password(user.getPassword())
                 .role(user.getRole())
+                .active(user.isActive())
                 .build();
     }
 
@@ -35,6 +36,7 @@ public interface UserEntityMapper {
                 .email(entity.getEmail())
                 .password(entity.getPassword())
                 .role(entity.getRole())
+                .active(entity.isActive())
                 .build();
     }
 }

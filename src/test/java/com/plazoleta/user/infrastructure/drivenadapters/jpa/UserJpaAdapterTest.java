@@ -48,9 +48,10 @@ class UserJpaAdapterTest {
                 .email("owner@plazoleta.com")
                 .password("encoded")
                 .role(UserRole.OWNER.name())
+                .active(true)
                 .build();
-        UserEntity entity = UserEntity.builder().email("owner@plazoleta.com").build();
-        User savedDomain = User.builder().id(1L).email("owner@plazoleta.com").role(UserRole.OWNER.name()).build();
+        UserEntity entity = UserEntity.builder().email("owner@plazoleta.com").active(true).build();
+        User savedDomain = User.builder().id(1L).email("owner@plazoleta.com").role(UserRole.OWNER.name()).active(true).build();
 
         when(userEntityMapper.toEntity(user)).thenReturn(entity);
         when(userRepository.save(entity)).thenReturn(entity);
@@ -62,12 +63,24 @@ class UserJpaAdapterTest {
     @Test
     @DisplayName("should find mapped user by id")
     void shouldFindMappedUserById() {
-        UserEntity entity = UserEntity.builder().id(7L).email("owner@plazoleta.com").build();
-        User user = User.builder().id(7L).email("owner@plazoleta.com").role(UserRole.OWNER.name()).build();
+        UserEntity entity = UserEntity.builder().id(7L).email("owner@plazoleta.com").active(true).build();
+        User user = User.builder().id(7L).email("owner@plazoleta.com").role(UserRole.OWNER.name()).active(true).build();
 
         when(userRepository.findById(7L)).thenReturn(Optional.of(entity));
         when(userEntityMapper.toDomain(entity)).thenReturn(user);
 
         assertThat(adapter.findById(7L)).isPresent();
+    }
+
+    @Test
+    @DisplayName("should find mapped user by email")
+    void shouldFindMappedUserByEmail() {
+        UserEntity entity = UserEntity.builder().id(7L).email("owner@plazoleta.com").active(true).build();
+        User user = User.builder().id(7L).email("owner@plazoleta.com").role(UserRole.OWNER.name()).active(true).build();
+
+        when(userRepository.findByEmail("owner@plazoleta.com")).thenReturn(Optional.of(entity));
+        when(userEntityMapper.toDomain(entity)).thenReturn(user);
+
+        assertThat(adapter.findByEmail("owner@plazoleta.com")).isPresent();
     }
 }

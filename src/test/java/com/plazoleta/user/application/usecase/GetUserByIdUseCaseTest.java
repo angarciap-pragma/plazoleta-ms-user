@@ -33,6 +33,7 @@ class GetUserByIdUseCaseTest {
                 .email("owner@plazoleta.com")
                 .password("encoded")
                 .role(UserRole.OWNER.name())
+                .active(true)
                 .build()));
 
         assertThat(getUserByIdUseCase.getUserById(new GetUserByIdQuery(1L)).role()).isEqualTo("OWNER");

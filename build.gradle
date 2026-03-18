@@ -43,6 +43,7 @@ dependencies {
 	runtimeOnly 'com.mysql:mysql-connector-j'
 
 	testImplementation 'org.assertj:assertj-core'
+	testImplementation 'io.jsonwebtoken:jjwt-api:0.12.7'
 	testImplementation 'org.mockito:mockito-core'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
