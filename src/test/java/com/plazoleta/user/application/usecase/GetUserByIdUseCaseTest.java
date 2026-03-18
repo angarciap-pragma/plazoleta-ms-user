@@ -36,7 +36,9 @@ class GetUserByIdUseCaseTest {
                 .active(true)
                 .build()));
 
-        assertThat(getUserByIdUseCase.getUserById(new GetUserByIdQuery(1L)).role()).isEqualTo("OWNER");
+        var response = getUserByIdUseCase.getUserById(new GetUserByIdQuery(1L));
+        assertThat(response.role()).isEqualTo("OWNER");
+        assertThat(response.phoneNumber()).isEqualTo("+573005698325");
     }
 
     @Test

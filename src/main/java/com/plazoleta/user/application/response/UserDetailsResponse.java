@@ -11,6 +11,7 @@ public record UserDetailsResponse(
         String firstName,
         String lastName,
         String documentId,
+        String phoneNumber,
         String email,
         String role,
         Long restaurantId

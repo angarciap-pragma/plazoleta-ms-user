@@ -29,6 +29,7 @@ public class GetUserByIdUseCase implements GetUserByIdServicePort {
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .documentId(user.getDocumentId())
+                .phoneNumber(user.getPhoneNumber())
                 .email(user.getEmail())
                 .role(user.getRole())
                 .restaurantId(user.getRestaurantId())
